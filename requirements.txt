@@ -1,0 +1,6 @@
+streamlit
+pandas
+rainbow-api
+mocca2
+seaborn
+matplotlib
