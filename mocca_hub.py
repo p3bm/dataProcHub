@@ -54,11 +54,11 @@ with tab1:
     
     # Assign method-specific values
     if lc_method == "Acidic":
-        inlet_file = "Method3_S1_C3_TQD_2mins"
-        inlet_switch = "Switch_Acidic_C3"
+        inlet_file = "Col3_Acidic_MeCN_2mins"
+        inlet_switch = "Switch_Col3_Acidic_MeCN"
     else:
-        inlet_file = "Method7_S1_C3_TQD_2mins"
-        inlet_switch = "Switch_Neutral_C3"
+        inlet_file = "Col3_Basic_MeCN_2mins"
+        inlet_switch = "Switch_Col3_Basic_MeCN"
 
     # Generate sample data
     file_names = []
@@ -155,17 +155,8 @@ with tab3:
                 if st.button("Run Deconvolution"):
                     with st.spinner("Processing..."):
                         try:
-                            # Load chromatogram data
-                            dataDirSample = rb.read(sample_raw_folder)
-                            dataFileSample = dataDirSample.get_file("_FUNC001.DAT")
-                            chromDataSample = Data2D(dataFileSample.xlabels, dataFileSample.ylabels, dataFileSample.data.T)
-
-                            dataDirBlank = rb.read(blank_raw_folder)
-                            dataFileBlank = dataDirBlank.get_file("_FUNC001.DAT")
-                            chromDataBlank = Data2D(dataFileBlank.xlabels, dataFileBlank.ylabels, dataFileBlank.data.T)
-
                             # Create chromatogram
-                            chromatogram = Chromatogram(chromDataSample, chromDataBlank)
+                            chromatogram = Chromatogram(sample_raw_folder, blank_raw_folder)
                             chromatogram.correct_baseline()
                             chromatogram.extract_time(min_time, max_time, inplace=True)
                             chromatogram.extract_wavelength(min_wavelength, None, inplace=True)
@@ -250,7 +241,7 @@ with tab4:
                 for idx, row in metadata.iterrows():
 
                     sample_metadata = row
-                    sample_name = str(sample_metadata["Sample Name"]).strip()
+                    sample_name = str(sample_metadata["FILE_NAME"]).strip()
                     folder_key = (sample_name + ".raw").lower()
                     raw_path = extracted_dirs.get(folder_key)
 
@@ -259,18 +250,8 @@ with tab4:
                         continue
 
                     found_files = os.listdir(raw_path)
-                    dataDir = rb.read(raw_path)
 
-                    # Try _FUNC002.DAT first, fallback to _FUNC001.DAT
-                    if "_FUNC002.DAT" in found_files:
-                        dataFile = dataDir.get_file("_FUNC002.DAT")
-                    elif "_FUNC001.DAT" in found_files:
-                        dataFile = dataDir.get_file("_FUNC001.DAT")
-                    else:
-                        st.error(f"❌ Neither _FUNC002.DAT nor _FUNC001.DAT found for {sample_name}")
-                        continue
-
-                    chromData = Data2D(dataFile.xlabels, dataFile.ylabels, (dataFile.data).T)
+                    chromData = raw_path
 
                     if sample_metadata["Is blank"]:
                         blankChrom = chromData
@@ -388,7 +369,7 @@ with tab5:
         filtered_samples = sample_list[mask].copy()
 
         # Merge with MOCCA results
-        merged = filtered_samples.merge(results, left_on="FILE_NAME", right_on="Chromatogram", how="inner")
+        merged = filtered_samples.merge(results, left_on="Sample Name", right_on="Chromatogram", how="inner")
 
         # Get peak columns from results
         data_columns = results.columns[2:]  # Assuming ID and Chromatogram are first two columns
