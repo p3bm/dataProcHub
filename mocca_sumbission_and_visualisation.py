@@ -1,17 +1,12 @@
 import streamlit as st
 import pandas as pd
-import tempfile
-import os
-import zipfile
-from mocca2 import Chromatogram, MoccaDataset, ProcessingSettings
-from mocca2.classes import Data2D
+from mocca2 import MoccaDataset
 import matplotlib.pyplot as plt
 import re
 import pickle
 from datetime import datetime
 import seaborn as sns
 import numpy as np
-import rainbow as rb
 
 # ---------- App Helper Functions ----------
 def generate_well_positions(tray_size,n):
@@ -81,12 +76,8 @@ def clean_peak_concs(results):
 def custom_autopct(pct):
     return f'{pct:.1f}%' if pct > 0 else ''
 
-def load_pickle_file(file):
-    mocca_dataset = pickle.load(file)
-    return MoccaDataset.from_dict(mocca_dataset)
-
 # ---------- Streamlit App ----------
-st.title("HTS Analytical Hub")
+st.title("HTS Sample Submission and Visualisation Hub")
 
 tab1, tab2 = st.tabs([
     "Sample List Generator",
