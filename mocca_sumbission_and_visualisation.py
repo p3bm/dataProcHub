@@ -92,6 +92,7 @@ with tab1:
     base_name = st.text_input("Base Sample Name", value="ELNXXXX-XXX_IPCX")
     if "." in base_name:
         st.error("Please remove any full stops from the sample name!")
+        st.stop()
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
     tray_no = st.number_input("Tray No.", 1, 10)
 
