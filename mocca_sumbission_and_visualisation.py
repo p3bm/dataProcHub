@@ -204,7 +204,7 @@ with tab1:
         )
 
     # Convert DataFrame to CSV
-    csv_data = edited_df.to_csv(index=False)
+    csv_data = edited_df.to_csv(index=False, line_terminator='\r\n').encode('utf-8')
     st.download_button(
         label="Download Sample List CSV",
         data=csv_data,
