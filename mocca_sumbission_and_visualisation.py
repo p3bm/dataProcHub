@@ -91,7 +91,7 @@ with tab1:
     tray_size = st.selectbox("Tray size", options=["48","96"], key="Sample submission tray szie")
     base_name = st.text_input("Base Sample Name", value="ELNXXXX-XXX_IPCX")
     if "." in base_name:
-        st.warning("Please remove any full stops from the sample name!")
+        st.error("Please remove any full stops from the sample name!")
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
     tray_no = st.number_input("Tray No.", 1, 10)
 
