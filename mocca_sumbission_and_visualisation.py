@@ -90,7 +90,6 @@ with tab1:
     
     tray_size = st.selectbox("Tray size", options=["48","96"], key="Sample submission tray szie")
     base_name = st.text_input("Base Sample Name", value="ELNXXXX-XXX_IPCX")
-    base_name = base_name.strip()
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
     tray_no = st.number_input("Tray No.", 1, 10)
 
@@ -204,6 +203,7 @@ with tab1:
         )
 
     # Convert DataFrame to CSV
+    edited_df = edited_df.applymap(lambda x: re.sub(r'[\r\n]+', ' ', str(x)).strip() if isinstance(x, str) else x)
     csv_data = edited_df.to_csv(index=False, lineterminator='\r\n').encode('utf-8')
     st.download_button(
         label="Download Sample List CSV",
