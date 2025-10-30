@@ -90,6 +90,7 @@ with tab1:
     
     tray_size = st.selectbox("Tray size", options=["48","96"], key="Sample submission tray szie")
     base_name = st.text_input("Base Sample Name", value="ELNXXXX-XXX_IPCX")
+    base_name = base_name.strip()
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
     tray_no = st.number_input("Tray No.", 1, 10)
 
