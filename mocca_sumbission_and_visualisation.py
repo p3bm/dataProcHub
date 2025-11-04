@@ -90,9 +90,6 @@ with tab1:
     
     tray_size = st.selectbox("Tray size", options=["48","96"], key="Sample submission tray szie")
     base_name = st.text_input("Base Sample Name", value="ELNXXXX-XXX_IPCX")
-    if "." in base_name:
-        st.error("Please remove any full stops from the sample name!")
-        st.stop()
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
     tray_no = st.number_input("Tray No.", 1, 10)
 
@@ -206,8 +203,7 @@ with tab1:
         )
 
     # Convert DataFrame to CSV
-    edited_df = edited_df.applymap(lambda x: re.sub(r'[\r\n]+', ' ', str(x)).strip() if isinstance(x, str) else x)
-    csv_data = edited_df.to_csv(index=False, lineterminator='\r\n').encode('utf-8')
+    csv_data = edited_df.to_csv(index=False)
     st.download_button(
         label="Download Sample List CSV",
         data=csv_data,
@@ -235,8 +231,9 @@ with tab2:
         uploaded_mocca_dataset = st.file_uploader("Upload MOCCA results .pkl file", type="pkl", key="full mocca dataset file upload")
         if uploaded_mocca_dataset:
             st.write("Using uplaoded dataset")
+            uploaded_mocca_dataset = pickle.load(uploaded_mocca_dataset)
             uploaded_mocca_dataset = MoccaDataset.from_dict(uploaded_mocca_dataset)
-            st.session_state["peak area data"], _ = uploaded_mocca_dataset.get_intergrals()
+            st.session_state["peak area data"], _ = uploaded_mocca_dataset.get_integrals()
             st.session_state["peak conc data"], _ = uploaded_mocca_dataset.get_concentrations()
 
     if "peak area data" in st.session_state and "peak conc data" in st.session_state:
