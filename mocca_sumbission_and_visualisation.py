@@ -136,9 +136,12 @@ with tab1:
     if lc_method == "Acidic":
         inlet_file = "C3S1_50_1p1"
         inlet_switch = "C3S1_50_switch_1p1"
-    else:
+    elif lc_method == "Neutral":
         inlet_file = "C3S2_50_1p1"
         inlet_switch = "C3S2_50_switch_1p1"
+    elif lc_method == "Acidic - 3mins":
+        inlet_file = "C3S1_50_1_3mins"
+        inlet_switch = "C3S1_50_switch_1p0"
 
     # Generate sample data
     file_names = []
