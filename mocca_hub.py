@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import tempfile
 import os
+import io
 import zipfile
 from mocca2 import Chromatogram, MoccaDataset, ProcessingSettings
 from mocca2.classes import Data2D
@@ -11,7 +12,7 @@ import pickle
 from datetime import datetime
 import seaborn as sns
 import numpy as np
-import time
+from datetime import datetime
 import rainbow as rb
 
 # ---------- App Helper Functions ----------
@@ -85,6 +86,31 @@ def custom_autopct(pct):
 def load_pickle_file(file):
     mocca_dataset = pickle.load(file)
     return MoccaDataset.from_dict(mocca_dataset)
+
+
+def parse_header_file(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
+
+    # Split into lines and filter only those that start with "$$"
+    lines = [line.strip() for line in content.splitlines() if line.strip().startswith("$$")]
+
+    # Create a dictionary from the lines
+    header_dict = {}
+    for line in lines:
+        if ":" in line:
+            key, value = line[2:].split(":", 1)  # Remove "$$" and split on first colon
+            header_dict[key.strip()] = value.strip()
+
+    return (
+        f'Sample Name: {header_dict.get("Job Code")}',
+        f'Acquisition Date: {header_dict.get("Acquired Date")}',
+        f'Acquisition Time: {header_dict.get("Acquired Time")}',
+        f'UPLC Method: {header_dict.get("Inlet Method")}'
+    )
+
+def add_to_report(report,text):
+    return report + text + "\n"
 
 # ---------- Streamlit App ----------
 st.title("HTS Analytical Hub")
@@ -262,8 +288,14 @@ with tab2:
 
         st.session_state["proc_finished"] = False
 
+        report = ""
+
         with st.spinner("Processing LC data..."):
             metadata = pd.read_csv(metadata_file)
+
+            savefilebasename = metadata_file.name.split("_sample_list.csv")[0]
+            report = add_to_report(report, f"#########\nHTS Batch: {savefilebasename}")
+            report = add_to_report(report, f"{datetime.now()}\n##########")
 
             # Extract zip to temporary directory
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -316,6 +348,11 @@ with tab2:
 
                     chromData = raw_path
 
+                    chrom_metadata = parse_header_file(raw_path + "\_HEADER.txt")
+                    for item in chrom_metadata:
+                        report = add_to_report(report, item)
+                    report = add_to_report(report, "##########\n")
+
                     if sample_metadata["Is blank"]:
                         blankChrom = chromData
                         continue
@@ -350,55 +387,38 @@ with tab2:
 
                     counter += 1
                     
-            settings_kwargs = dict(
-                baseline_model="flatfit",
-                peak_model="Bemg",
-                min_elution_time=min_elution_time,
-                max_elution_time=max_elution_time,
-                min_wavelength=min_wavelength,
-                max_wavelength=max_wavelength,
-                explained_threshold=r2_input_batch,
-                min_spectrum_correl=min_spectrum_corr,
-                min_rel_integral=min_rel_integral,
-                min_prominence=min_peak_height_batch,
-                min_rel_prominence=min_rel_peak_height_batch,
-                border_max_peak_cutoff=0.001,
-                max_peak_comps=10
-            )
+        settings_kwargs = dict(
+            baseline_model="flatfit",
+            peak_model="Bemg",
+            min_elution_time=min_elution_time,
+            max_elution_time=max_elution_time,
+            min_wavelength=min_wavelength,
+            max_wavelength=max_wavelength,
+            explained_threshold=r2_input_batch,
+            min_spectrum_correl=min_spectrum_corr,
+            min_rel_integral=min_rel_integral,
+            min_prominence=min_peak_height_batch,
+            min_rel_prominence=min_rel_peak_height_batch,
+            border_max_peak_cutoff=0.001,
+            max_peak_comps=10
+        )
 
-            settings = ProcessingSettings(**settings_kwargs)
+        settings = ProcessingSettings(**settings_kwargs)
+        dataset.process_all(settings, verbose=True, cores=os.cpu_count()-1)
 
-            try:
-                dataset.process_all(settings, verbose=True, cores=os.cpu_count()-1)
-            except Exception as e:
-                st.warning(f"Error encountered - retrying processing with a minimum relative peak height threshold of {min_rel_peak_height_batch*10}.\n{e}")
-                settings_kwargs = dict(
-                    baseline_model="flatfit",
-                    peak_model="Bemg",
-                    min_elution_time=min_elution_time,
-                    max_elution_time=max_elution_time,
-                    min_wavelength=min_wavelength,
-                    max_wavelength=max_wavelength,
-                    explained_threshold=r2_input_batch,
-                    min_spectrum_correl=min_spectrum_corr,
-                    min_rel_integral=min_rel_integral,
-                    min_prominence=min_peak_height_batch,
-                    min_rel_prominence=min_rel_peak_height_batch*10,
-                    border_max_peak_cutoff=0.001,
-                    max_peak_comps=10
-                )
-                settings = ProcessingSettings(**settings_kwargs)
-                dataset.process_all(settings, verbose=True, cores=os.cpu_count()-1)
+        report = add_to_report(report, "Data Processing Settings")
+        settings_dict = dataset.settings.to_dict()
+        for key in settings_dict:
+            report = add_to_report(report, settings_dict[key])
+        report = add_to_report(report, "##########\n")
 
-            st.session_state["dataset"] = dataset
-            st.success("Processing complete!")
-            st.session_state["proc_finished"] = True
+        st.session_state["dataset"] = dataset
+        st.success("Processing complete!")
+        st.session_state["proc_finished"] = True
 
     if "proc_finished" in st.session_state:
 
         dataset = st.session_state["dataset"]
-
-        savefilebasename = metadata_file.name.split("_sample_list.csv")[0]
 
         st.download_button(
             "Download Full Dataset",
@@ -413,6 +433,15 @@ with tab2:
             data=pickle.dumps({"peak areas": dataset.get_integrals(), "peak concentrations": dataset.get_concentrations()}),
             file_name=f"{savefilebasename}_{datetime.now()}_peak_info_only.pkl",
             mime='application/octet-stream'
+        )
+
+        report_bytes = io.BytesIO(report.encode('utf-8'))
+        
+        st.download_button(
+            label="Download Report",
+            data=report_bytes,
+            file_name=f"{savefilebasename}_report.txt",
+            mime="text/plain"
         )
 
 # ----------- Tab 3: Chromatogram Visualisation -----------
@@ -746,4 +775,5 @@ with tab4:
                         fontsize=legend_size, frameon=False)
 
                 st.pyplot(fig)
+
 
