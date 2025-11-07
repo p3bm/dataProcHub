@@ -746,3 +746,4 @@ with tab4:
                         fontsize=legend_size, frameon=False)
 
                 st.pyplot(fig)
+
