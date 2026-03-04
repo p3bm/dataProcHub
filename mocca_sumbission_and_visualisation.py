@@ -61,14 +61,20 @@ for i in range(0,96):
 
 @st.cache_data
 def clean_peak_areas(results):
-    results.drop('Chromatogram ID', axis=1, inplace=True)
+    try:
+        results.drop('Chromatogram ID', axis=1, inplace=True)
+    except:
+        st.warning("clean_peak_areas() function cannot drop 'Chromatogram ID' column because it is not present.")
     results = rename_duplicate_columns(results)
     results.fillna(0.0, inplace=True)
     return results
 
 @st.cache_data
 def clean_peak_concs(results):
-    results.drop('Chromatogram ID', axis=1, inplace=True)
+    try:
+        results.drop('Chromatogram ID', axis=1, inplace=True)
+    except:
+        st.warning("clean_peak_concs() function cannot drop 'Chromatogram ID' column because it is not present.")
     results = rename_duplicate_columns(results)
     results.fillna(0.0, inplace=True)
     return results
@@ -136,12 +142,9 @@ with tab1:
     if lc_method == "Acidic":
         inlet_file = "C3S1_50_1p1"
         inlet_switch = "C3S1_50_switch_1p1"
-    elif lc_method == "Neutral":
+    else:
         inlet_file = "C3S2_50_1p1"
         inlet_switch = "C3S2_50_switch_1p1"
-    elif lc_method == "Acidic - 3mins":
-        inlet_file = "C3S1_50_1_3mins"
-        inlet_switch = "C3S1_50_switch_1p0"
 
     # Generate sample data
     file_names = []
@@ -222,7 +225,13 @@ with tab1:
 with tab2:
     st.header("Data Visualisation")
 
-    data_source = st.radio("Select data source", ["Use peak area/concentration .pkl file", "Use full MOCCA dataset .pkl file"], index=0)
+    data_source = st.radio("Select data source",
+                           [
+                               "Use peak area/concentration .pkl file",
+                               "Use full MOCCA dataset .pkl file",
+                               "Use CSV table of data."
+                           ],
+                           index=0)
 
     if data_source == "Use peak area/concentration .pkl file":
         st.write("Upload a peak area/concetration dataset")
@@ -231,6 +240,7 @@ with tab2:
             peak_dataset = pickle.load(peak_dataset)
             st.session_state["peak area data"], _ = peak_dataset["peak areas"]
             st.session_state["peak conc data"], _ = peak_dataset["peak concentrations"]
+            sample_column_name = "Chromatogram"
 
     elif data_source == "Use full MOCCA dataset .pkl file":
         st.warning("Using a full MOCCA dataset may cause the Streamlit app to run very slowly. Use the peak area/concentration .pkl file where possible.")
@@ -242,6 +252,17 @@ with tab2:
             uploaded_mocca_dataset = MoccaDataset.from_dict(uploaded_mocca_dataset)
             st.session_state["peak area data"], _ = uploaded_mocca_dataset.get_integrals()
             st.session_state["peak conc data"], _ = uploaded_mocca_dataset.get_concentrations()
+            sample_column_name = "Chromatogram"
+    
+    elif data_source == "Use CSV table of data.":
+        peak_dataset = st.file_uploader("Upload an appropriate CSV file of results", type=".csv")
+        data_type = st.radio("Select type of data contained in CSV file", ["LCAP", "Concentrations"], index=0)
+        data_df = pd.read_csv(peak_dataset)
+        if data_type == "LCAP":
+            st.session_state["peak area data"] = data_df
+        elif data_type == "Concentrations":
+            st.session_state["peak conc data"] = data_df
+        sample_column_name = st.selectbox("Please select the column that contains the sample names", options=data_df.columns)
 
     if "peak area data" in st.session_state and "peak conc data" in st.session_state:
         
@@ -336,7 +357,7 @@ with tab2:
 
             # Process each row
             for _, row in heatmap_results.iterrows():
-                sample_name = str(row["Chromatogram"])
+                sample_name = str(row[sample_column_name])
                 match = re.search(r'(\D+)(\d+)', sample_name.split('_')[-1])
                 if match:
                     row_letter, col_number = match.groups()
@@ -375,8 +396,8 @@ with tab2:
             st.header("Pie Chart Array")
 
             try:
-                pie_chart_results = lcap_results.drop("Chromatogram", axis=1)
-                pie_chart_sample_names = lcap_results["Chromatogram"].tolist()
+                pie_chart_results = lcap_results.drop(sample_column_name, axis=1)
+                pie_chart_sample_names = lcap_results[sample_column_name].tolist()
             except KeyError:
                 st.warning("Please select the LCAP results type from the dropdown above to enable pie chart generation.")
                 st.stop()
