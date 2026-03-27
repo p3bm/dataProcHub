@@ -100,7 +100,7 @@ with tab1:
         st.error("Please remove any full stops from the sample name!")
         st.stop()
     lc_method = st.selectbox("LC Method", options=["Acidic", "Neutral"])
-    tray_no = st.number_input("Tray No.", 1, 10)
+    tray_no = st.number_input("Tray No.", min=1, max=10, value="min")
 
     st.write(f"Using the checkboxes below, indicate which wells in the {tray_size}-well plate are in use.")
 
