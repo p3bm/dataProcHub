@@ -140,11 +140,11 @@ with tab1:
 
     # Assign method-specific values
     if lc_method == "Acidic":
-        inlet_file = "C3S1_50_1p1"
-        inlet_switch = "C3S1_50_switch_1p1"
+        inlet_file = "HTS_Acidic"
+        inlet_switch = "HTS_Acidic_switch"
     else:
-        inlet_file = "C3S2_50_1p1"
-        inlet_switch = "C3S2_50_switch_1p1"
+        inlet_file = "HTS_Neutral"
+        inlet_switch = "HTS_Neutral_switch"
 
     # Generate sample data
     file_names = []
